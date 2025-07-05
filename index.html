@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Lluvia Gigante de Amor</title>
   <style>
     body {
@@ -10,6 +10,7 @@
       background: black;
       overflow: hidden;
       cursor: none; /* Oculta el cursor por defecto */
+      touch-action: manipulation; /* Mejora la respuesta táctil */
     }
     canvas {
       display: block;
@@ -36,6 +37,11 @@
       text-align: center;
       opacity: 0.8;
       text-shadow: 0 0 20px rgba(255, 182, 193, 0.9);
+    }
+    @media (max-width: 768px) {
+      .center-message {
+        font-size: 3rem; /* Tamaño más pequeño para móviles */
+      }
     }
     /* Estilo para el cursor de corazón */
     .heart-cursor {
@@ -70,19 +76,22 @@
 </audio>
 
 <script>
+  // Detectar si es un dispositivo táctil
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+  
   document.addEventListener('DOMContentLoaded', function() {
     const audio = document.getElementById('audio-control');
     
     // Función para manejar la reproducción con volumen al 80%
     function playAudio() {
-      audio.volume = 0.8; // Volumen al 80% como solicitaste
+      audio.volume = 0.8;
       audio.play().catch(error => {
         console.log('Error al reproducir audio:', error);
       });
     }
     
-    // Reproducir solo al hacer clic en la página
-    document.body.addEventListener('click', function() {
+    // Reproducir al hacer clic o tocar en la página
+    document.body.addEventListener(isTouchDevice ? 'touchstart' : 'click', function() {
       playAudio();
     });
   });
@@ -93,29 +102,31 @@
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // Mover el corazón con el cursor
-  document.addEventListener('mousemove', (e) => {
-    cursor.style.left = `${e.clientX - 16}px`;
-    cursor.style.top = `${e.clientY - 16}px`;
-    
-    // Efecto de latido al hacer hover
-    cursor.style.transform = `scale(${1 + Math.sin(Date.now()/300)*0.05})`;
-  });
+  // Mostrar/ocultar cursor en móviles
+  if (isTouchDevice) {
+    cursor.style.display = 'none';
+  } else {
+    // Mover el corazón con el cursor solo en no-táctiles
+    document.addEventListener('mousemove', (e) => {
+      cursor.style.left = `${e.clientX - 16}px`;
+      cursor.style.top = `${e.clientY - 16}px`;
+      cursor.style.transform = `scale(${1 + Math.sin(Date.now()/300)*0.05})`;
+    });
 
-  // Efecto de click en el corazón
-  document.addEventListener('mousedown', () => {
-    cursor.style.transform = 'scale(0.8)';
-  });
-  
-  document.addEventListener('mouseup', () => {
-    cursor.style.transform = 'scale(1.1)';
-    setTimeout(() => {
-      cursor.style.transform = 'scale(1)';
-    }, 100);
-  });
+    document.addEventListener('mousedown', () => {
+      cursor.style.transform = 'scale(0.8)';
+    });
+    
+    document.addEventListener('mouseup', () => {
+      cursor.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        cursor.style.transform = 'scale(1)';
+      }, 100);
+    });
+  }
 
   const text = "TE AMO";
-  const baseFontSize = 42;
+  const baseFontSize = isTouchDevice ? 24 : 42; // Tamaño más pequeño para móviles
   const columns = Math.floor(canvas.width / (baseFontSize * 2));
   const drops = new Array(columns).fill(1);
 
@@ -148,7 +159,10 @@
   }
 
   let particles = [];
-  canvas.addEventListener('click', (e) => {
+  const handleInteraction = (e) => {
+    const x = isTouchDevice ? e.touches[0].clientX : e.clientX;
+    const y = isTouchDevice ? e.touches[0].clientY : e.clientY;
+    
     const directions = [
       {x: 0, y: -1},
       {x: 0, y: 1},
@@ -158,8 +172,8 @@
     
     directions.forEach(dir => {
       particles.push({
-        x: e.clientX,
-        y: e.clientY,
+        x: x,
+        y: y,
         vx: dir.x * (3 + Math.random() * 2),
         vy: dir.y * (3 + Math.random() * 2),
         alpha: 1,
@@ -170,8 +184,8 @@
 
     for (let i = 0; i < 16; i++) {
       particles.push({
-        x: e.clientX,
-        y: e.clientY,
+        x: x,
+        y: y,
         vx: (Math.random() - 0.5) * 6,
         vy: (Math.random() - 0.5) * 6,
         alpha: 1,
@@ -179,7 +193,9 @@
         color: `hsl(${Math.random() * 20 + 340}, 100%, ${Math.random() * 15 + 85}%)`
       });
     }
-  });
+  };
+
+  canvas.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleInteraction);
 
   function drawParticles() {
     particles.forEach((p, index) => {
